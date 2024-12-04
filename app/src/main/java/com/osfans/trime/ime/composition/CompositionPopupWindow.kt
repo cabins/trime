@@ -54,118 +54,138 @@ class CompositionPopupWindow(
     // 悬浮窗口彈出位置
     private var popupWindowPos = PopupPosition.fromString(theme.generalStyle.layout.position)
 
-    private val mPopupWindow =
-        PopupWindow(root).apply {
-            isClippingEnabled = false
-            inputMethodMode = PopupWindow.INPUT_METHOD_NOT_NEEDED
-            if (Build.VERSION.SDK_INT >= VERSION_CODES.M) {
-                windowLayoutType =
-                    WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG
-            }
-            setBackgroundDrawable(
-                ColorManager.getDrawable(
-                    ctx,
-                    "text_back_color",
-                    theme.generalStyle.layout.border,
-                    "border_color",
-                    theme.generalStyle.layout.roundCorner,
-                    theme.generalStyle.layout.alpha,
-                ),
-            )
-            width = ViewGroup.LayoutParams.WRAP_CONTENT
-            height = ViewGroup.LayoutParams.WRAP_CONTENT
-            elevation =
-                ctx.dp(
-                    theme.generalStyle.layout.elevation
-                        .toFloat(),
-                )
+    private val mPopupWindow = PopupWindow(root).apply {
+        isClippingEnabled = false
+        inputMethodMode = PopupWindow.INPUT_METHOD_NOT_NEEDED
+        if (Build.VERSION.SDK_INT >= VERSION_CODES.M) {
+            windowLayoutType = WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG
         }
+        setBackgroundDrawable(
+            ColorManager.getDrawable(
+                ctx,
+                "text_back_color",
+                theme.generalStyle.layout.border,
+                "border_color",
+                theme.generalStyle.layout.roundCorner,
+                theme.generalStyle.layout.alpha,
+            ),
+        )
+        width = ViewGroup.LayoutParams.WRAP_CONTENT
+        height = ViewGroup.LayoutParams.WRAP_CONTENT
+        elevation = ctx.dp(
+            theme.generalStyle.layout.elevation.toFloat(),
+        )
+    }
 
     var isCursorUpdated = false // 光標是否移動
 
     private val mPopupRectF = RectF()
     private val mPopupHandler = Handler(Looper.getMainLooper())
+    private val mStatusBarHeight = getBarHeight(ctx, "status_bar_height")
+    private val mNavigationBarHeight = getBarHeight(ctx, "navigation_bar_height")
 
-    private val mPopupTimer =
-        Runnable {
-            if (bar.view.windowToken == null) return@Runnable
-            bar.view.let { anchor ->
-                var x = 0
-                var y = 0
-                val (_, anchorY) =
-                    intArrayOf(0, 0).also {
-                        anchor.getLocationInWindow(it)
-                    }
-                root.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
-                root.requestLayout()
-                val selfWidth = root.width
-                val selfHeight = root.height
+    private val mPopupTimer = Runnable {
+        if (bar.view.windowToken == null) return@Runnable
+        bar.view.let { anchor ->
+            var x = 0
+            var y = 0
+            val (_, anchorY) = intArrayOf(0, 0).also {
+                anchor.getLocationInWindow(it)
+            }
+            val displayMetrics = ctx.resources.displayMetrics
 
-                val minX = anchor.dp(popupMarginH)
-                val minY = anchor.dp(popupMargin)
-                val maxX = anchor.width - selfWidth - minX
-                val maxY = anchorY - selfHeight - minY
-                if (isWinFixed() || !isCursorUpdated) {
-                    // setCandidatesViewShown(true);
-                    when (popupWindowPos) {
-                        PopupPosition.TOP_RIGHT -> {
-                            x = maxX
-                            y = minY
-                        }
-                        PopupPosition.TOP_LEFT -> {
-                            x = minX
-                            y = minY
-                        }
-                        PopupPosition.BOTTOM_RIGHT -> {
-                            x = maxX
-                            y = maxY
-                        }
-                        PopupPosition.DRAG -> {
-                            x = popupWindowX
-                            y = popupWindowY
-                        }
-                        PopupPosition.FIXED, PopupPosition.BOTTOM_LEFT -> {
-                            x = minX
-                            y = maxY
-                        }
-                        else -> {
-                            x = minX
-                            y = maxY
-                        }
+            root.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
+            root.requestLayout()
+            val selfWidth = root.width
+            val selfHeight = root.height
+
+            val minX = anchor.dp(popupMarginH)
+            val minY = anchor.dp(popupMargin) + mStatusBarHeight
+            val maxX =
+                (if (anchor.width <= 0) displayMetrics.widthPixels else anchor.width) - selfWidth - minX
+            val maxY =
+                (if (anchor.height <= 0 || anchor.height >= displayMetrics.heightPixels) displayMetrics.heightPixels else anchor.height) - selfHeight - minY - mNavigationBarHeight
+
+            if (isWinFixed() || !isCursorUpdated) {
+                // setCandidatesViewShown(true);
+                when (popupWindowPos) {
+                    PopupPosition.TOP_RIGHT -> {
+                        x = maxX
+                        y = minY
                     }
-                } else {
-                    // setCandidatesViewShown(false);
-                    when (popupWindowPos) {
-                        PopupPosition.LEFT, PopupPosition.LEFT_UP -> x = mPopupRectF.left.toInt()
-                        PopupPosition.RIGHT, PopupPosition.RIGHT_UP -> x = mPopupRectF.right.toInt()
-                        else -> Timber.wtf("UNREACHABLE BRANCH")
+
+                    PopupPosition.TOP_LEFT -> {
+                        x = minX
+                        y = minY
                     }
-                    x = MathUtils.clamp(x, minX, maxX)
-                    when (popupWindowPos) {
-                        PopupPosition.LEFT, PopupPosition.RIGHT ->
-                            y = mPopupRectF.bottom.toInt() + popupMargin
-                        PopupPosition.LEFT_UP, PopupPosition.RIGHT_UP ->
+
+                    PopupPosition.BOTTOM_RIGHT -> {
+                        x = maxX
+                        y = maxY
+                    }
+
+                    PopupPosition.DRAG -> {
+                        x = popupWindowX
+                        y = popupWindowY
+                    }
+
+                    PopupPosition.FIXED, PopupPosition.BOTTOM_LEFT -> {
+                        x = minX
+                        y = maxY
+                    }
+
+                    else -> {
+                        x = minX
+                        y = maxY
+                    }
+                }
+            } else {
+                // setCandidatesViewShown(false);
+                when (popupWindowPos) {
+                    PopupPosition.LEFT, PopupPosition.LEFT_UP -> x = mPopupRectF.left.toInt()
+                    PopupPosition.RIGHT, PopupPosition.RIGHT_UP -> x = mPopupRectF.right.toInt()
+                    else -> Timber.wtf("UNREACHABLE BRANCH")
+                }
+                x = MathUtils.clamp(x, minX, maxX)
+                when (popupWindowPos) {
+                    PopupPosition.LEFT, PopupPosition.RIGHT -> {
+                        y = mPopupRectF.bottom.toInt() + popupMargin
+                        if (y > maxY) {
                             y = mPopupRectF.top.toInt() - selfHeight - popupMargin
-                        else -> Timber.wtf("UNREACHABLE BRANCH")
+                        }
                     }
-                    y = MathUtils.clamp(y, minY, maxY)
+
+                    PopupPosition.LEFT_UP, PopupPosition.RIGHT_UP -> {
+                        y = mPopupRectF.top.toInt() - selfHeight - popupMargin
+                        if (y < minY) {
+                            y = mPopupRectF.bottom.toInt() + popupMargin
+                        }
+                    }
+
+                    else -> Timber.wtf("UNREACHABLE BRANCH")
                 }
-                if (!mPopupWindow.isShowing) {
-                    mPopupWindow.showAtLocation(anchor, Gravity.START or Gravity.TOP, x, y)
-                } else {
-                    /* must use the width and height of popup window itself here directly,
+                y = MathUtils.clamp(y, minY, maxY)
+            }
+
+            y -= mStatusBarHeight
+            if (!mPopupWindow.isShowing) {
+                mPopupWindow.showAtLocation(anchor, Gravity.START or Gravity.TOP, x, y)
+            } else {/* must use the width and height of popup window itself here directly,
                      * otherwise the width and height cannot be updated! */
-                    mPopupWindow.update(x, y, -1, -1)
-                }
+                mPopupWindow.update(x, y, -1, -1)
             }
         }
+    }
+
+    fun getBarHeight(context: Context, name: String): Int {
+        var result = 0
+        val resourceId = context.resources.getIdentifier(name, "dimen", "android")
+        if (resourceId > 0) result = context.resources.getDimensionPixelSize(resourceId)
+        return result
+    }
 
     fun isWinFixed(): Boolean =
-        Build.VERSION.SDK_INT <= VERSION_CODES.LOLLIPOP ||
-            popupWindowPos !== PopupPosition.LEFT &&
-            popupWindowPos !== PopupPosition.RIGHT &&
-            popupWindowPos !== PopupPosition.LEFT_UP &&
-            popupWindowPos !== PopupPosition.RIGHT_UP
+        Build.VERSION.SDK_INT <= VERSION_CODES.LOLLIPOP || popupWindowPos !== PopupPosition.LEFT && popupWindowPos !== PopupPosition.RIGHT && popupWindowPos !== PopupPosition.LEFT_UP && popupWindowPos !== PopupPosition.RIGHT_UP
 
     override fun onInputContextUpdate(ctx: RimeProto.Context) {
         if (ctx.composition.length > 0) {

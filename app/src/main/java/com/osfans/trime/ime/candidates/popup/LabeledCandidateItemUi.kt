@@ -64,12 +64,14 @@ class LabeledCandidateItemUi(
         val commentFg = if (highlighted) highlightCommentTextColor else commentColor
         root.text =
             buildSpannedString {
+                append("  ")
                 inSpans(CandidateSpan(labelFg, ctx.sp(labelSize), labelFont)) { append(candidate.label) }
                 inSpans(CandidateSpan(textFg, ctx.sp(textSize), textFont)) { append(candidate.text) }
                 if (!candidate.comment.isNullOrEmpty()) {
                     append(" ")
                     inSpans(CandidateSpan(commentFg, ctx.sp(commentSize), commentFont)) { append(candidate.comment) }
                 }
+                append("  ")
             }
         val bg = if (highlighted) highlightBackColor else Color.TRANSPARENT
         root.backgroundColor = bg

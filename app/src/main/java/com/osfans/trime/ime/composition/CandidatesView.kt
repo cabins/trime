@@ -91,13 +91,13 @@ class CandidatesView(
     init {
         verticalPadding = dp(theme.generalStyle.layout.marginX)
         horizontalPadding = dp(theme.generalStyle.layout.marginY)
-        add(
-            preeditUi.root,
-            lParams(wrapContent, wrapContent) {
-                topOfParent()
-                startOfParent()
-            },
-        )
+        // add(
+        //     preeditUi.root,
+        //     lParams(wrapContent, wrapContent) {
+        //         topOfParent()
+        //         startOfParent()
+        //     },
+        // )
         add(
             candidatesUi.root,
             lParams(wrapContent, wrapContent) {
